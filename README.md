@@ -1,15 +1,23 @@
-# Modified Files Summary
+# Tổng quan tệp đã chỉnh sửa
 
-## Modified Dart Files in `lib` folder
+## Danh sách class đã sửa
 
-The following files have been modified and need to be updated in the source code:
+- lib/config/store_secure_config.dart: `StoreSecureConfig`
+- lib/config/store_setting.dart: `SharePreferenceKey`, `StoreConfig`, `StoreGlobalConfig`
+- lib/global_constant.dart: `EnvConfig`
+- lib/view_model/login_screen.viewmodel.dart: `LoginScreenViewModel`
+- lib/ui/view/login-screen/login.screen.dart: `LoginScreen`, `_LoginScreenState`
 
-### Config Files
+## Các tệp Dart đã sửa trong thư mục `lib`
+
+Các tệp sau đã được chỉnh sửa và cần được cập nhật trong source code:
+
+### Tệp cấu hình
 
 #### `lib/config/store_secure_config.dart`
 
-- Added support for development environment biometric storage
-- Key changes:
+- Thêm hỗ trợ lưu trữ sinh trắc học cho môi trường phát triển (development)
+- Thay đổi chính:
 
 ```diff
 -final storage = FlutterSecureStorage();
@@ -45,7 +53,7 @@ The following files have been modified and need to be updated in the source code
 +  }
 ```
 
-- Modified biometric methods to support both environments:
+- Chỉnh sửa phương thức sinh trắc học để hỗ trợ cả hai môi trường:
 
 ```diff
  static Future<void> storeValueBioMetric(String value) async {
@@ -69,7 +77,7 @@ The following files have been modified and need to be updated in the source code
 
 #### `lib/config/store_setting.dart`
 
-- Added development environment keys:
+- Thêm các khóa dành cho môi trường phát triển:
 
 ```diff
 class SharePreferenceKey {
@@ -88,7 +96,7 @@ class SharePreferenceKey {
 }
 ```
 
-- Updated config store clearing:
+- Cập nhật việc xóa dữ liệu cấu hình:
 
 ```diff
 static Future<void> clearConfigStore() async {
@@ -117,11 +125,11 @@ static Future<void> clearConfigStore() async {
 }
 ```
 
-### Core Files
+### Tệp lõi
 
 #### `lib/global_constant.dart`
 
-- Added development environment check:
+- Thêm kiểm tra môi trường phát triển:
 
 ```diff
 class EnvConfig {
@@ -139,13 +147,13 @@ class EnvConfig {
 
 #### `lib/main.dart`
 
-- Updated Firebase messaging handling and app initialization
+- Cập nhật xử lý Firebase Messaging và khởi tạo ứng dụng
 
-### View Models
+### View Model
 
 #### `lib/view_model/login_screen.viewmodel.dart`
 
-- Removed unnecessary imports and updated logout handling:
+- Loại bỏ import không cần thiết và cập nhật xử lý đăng xuất:
 
 ```diff
 -import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -175,11 +183,11 @@ class EnvConfig {
 +StoreSecureConfig.removeAllDataLocalStorage();
 ```
 
-### UI Screens
+### Màn hình UI
 
 #### `lib/ui/view/login-screen/login.screen.dart`
 
-- Refactored biometric authentication:
+-- Tái cấu trúc xác thực sinh trắc học:
 
 ```diff
 Future<void> _authenticateWithBiometrics() async {
@@ -223,7 +231,7 @@ Future<void> _authenticateWithBiometrics() async {
 +    }
 ```
 
-- Added new helper method:
+- Thêm phương thức hỗ trợ mới:
 
 ```diff
 +  // Hàm xử lý đăng nhập thành công
@@ -249,6 +257,3 @@ Future<void> _authenticateWithBiometrics() async {
 +  }
 ```
 
-## Note
-
-These files have been modified in the `phase_dev_release_06_2025` branch. Please ensure these changes are properly integrated into your codebase.
