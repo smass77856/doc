@@ -1,4 +1,6 @@
-# Tổng quan tệp đã chỉnh sửa
+# Tổng quan tệp đã chỉnh sửa (có thể vào link dưới để đọc cho dễ)
+## Hiện tại do xung đột môi trường DEV và PROD trên thiết bị nên bị lỗi FACEID và phần lưu trạng thái của toggle FaceID trong setting.
+https://github.com/smass77856/doc
 
 ## Danh sách class đã sửa
 
@@ -256,4 +258,143 @@ Future<void> _authenticateWithBiometrics() async {
 +    }
 +  }
 ```
+
+## Ghi chú
+
+Các tệp này đã được chỉnh sửa trong nhánh `phase_dev_release_06_2025`. Vui lòng đảm bảo những thay đổi này được tích hợp đầy đủ vào mã nguồn của bạn.
+
+---
+
+## High light thay đổi cho UI (để DEV tích hợp nhanh)
+
+### `lib/ui/view/more-screen/more.screen.dart`
+
+- Các điểm thay đổi chính liên quan Face ID/Touch ID và lưu trạng thái:
+
+```diff
+@@ class _MoreScreenState extends StateConsumer<MoreScreen> with BaseFunction {
+   bool? _canCheckBiometrics;
+   _SupportState _supportState = _SupportState.unknown;
+   List<BiometricType>? _availableBiometrics;
+   bool _isEnabled = false;
+   String? languageCode;
+   final RefreshController _refreshController = RefreshController();
+   final LocalAuthentication auth = LocalAuthentication();
+@@
+   _isEnabled = await StoreSecureConfig.getValueBioMetric() == "true";
+   auth.isDeviceSupported().then(
+         (bool isSupported) => setState(() => _supportState = isSupported
+             ? _SupportState.supported
+             : _SupportState.unsupported),
+       );
+   _checkBiometrics();
+   _getAvailableBiometrics();
+@@
+   void toggleSwitch(bool value) {
+     if (_availableBiometrics != null && _availableBiometrics!.isNotEmpty) {
+       if (value == false) {
+         // show confirm dialog
+         // on OK:
++        StoreSecureConfig.storeValueBioMetric("false");
+         setState(() { _isEnabled = false; });
+       } else {
+         if (EnvConfig.checkIsDev) {
+           StoreGlobalConfig.setConfigToStore<bool>(SharePreferenceKey.isUsingBiometricDev, true);
+           StoreGlobalConfig.setConfigToStore<bool>(SharePreferenceKey.allowBiometricDev, true);
+         } else {
+           StoreGlobalConfig.setConfigToStore<bool>(SharePreferenceKey.isUsingBiometric, true);
+           StoreGlobalConfig.setConfigToStore<bool>(SharePreferenceKey.allowBiometric, true);
+         }
++        StoreSecureConfig.storeValueBioMetric("true");
++        StoreSecureConfig.storeValueIsUsingBioMetric("true");
+         setState(() { _isEnabled = true; });
+       }
+     } else {
+       // show guide dialog to enable biometric in device settings
+     }
+   }
+```
+
+- Tóm tắt:
+  - Đọc trạng thái bật/tắt từ `StoreSecureConfig.getValueBioMetric()` thay vì chỉ `StoreGlobalConfig`.
+  - Ghi trạng thái cho phép vào SecureStorage: `storeValueBioMetric("true"|"false")`, `storeValueIsUsingBioMetric("true")` khi bật.
+  - Giữ phân tách DEV/PROD bằng `EnvConfig.checkIsDev` đối với `StoreGlobalConfig`.
+
+### `lib/ui/view/signin-screen/sign_in.screen.dart`
+
+- Các điểm thay đổi chính để đăng nhập bằng sinh trắc học khớp storage mới:
+
+```diff
+@@ class _SignInScreenState extends State<SignInScreen> with BaseFunction {
+   final LocalAuthentication auth = LocalAuthentication();
+   _SupportState _supportState = _SupportState.unknown;
+   bool? _canCheckBiometrics;
+   List<BiometricType>? _availableBiometrics;
+@@
+   Future<void> _getEmailBio() async {
+     var value = await storage.read(
+         key: StoreSecureConfig.getEmailBio(), aOptions: _getAndroidOptions());
+     setState(() { _emailBio = value ?? ""; });
+   }
+
+   Future<void> _getPassBio() async {
+     var value = await storage.read(
+         key: StoreSecureConfig.getPassBio(), aOptions: _getAndroidOptions());
+     setState(() { _passBio = value ?? ""; });
+   }
+@@ // Sau khi login thường thành công, ghi lại thông tin để lần sau dùng Face/Touch ID
+   await storage.write(
+       key: StoreSecureConfig.getEmailBio(),
+       value: _emailController.text,
+       aOptions: _getAndroidOptions());
+   await storage.write(
+       key: StoreSecureConfig.getPassBio(),
+       value: _passwordController.text,
+       aOptions: _getAndroidOptions());
+@@ // Nút Face/Touch ID
+   if (_supportState == _SupportState.supported)
+     GestureDetector(
+       onTap: () {
+         if (isAllowbiometric != true && _availableBiometrics != null && _availableBiometrics!.isEmpty) {
+           return;
+         }
+         if (isAllowbiometric == true && _availableBiometrics != null && _availableBiometrics!.isEmpty) {
+           // dialog hướng dẫn vào cài đặt thiết bị
+         }
+         if (isAllowbiometric == true && _availableBiometrics != null && _availableBiometrics!.isNotEmpty) {
+           _authenticateWithBiometrics();
+         }
+         if (isAllowbiometric != true && _availableBiometrics != null && _availableBiometrics!.isNotEmpty) {
+           // dialog hướng dẫn bật trong app setting
+         }
+       },
+       child: // icon Face/Touch
+     );
+@@ // Đăng nhập sinh trắc học (điều kiện + cờ sử dụng)
+   Future<void> _authenticateWithBiometrics() async {
+     bool authenticated = false;
+     try {
+       setState(() { _isAuthenticating = true; _authorized = 'Authenticating'; });
+       authenticated = await auth.authenticate(
+         localizedReason: 'Scan your fingerprint (or face or whatever) to authenticate',
+         options: const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
+       );
+       setState(() { _isAuthenticating = false; _authorized = 'Authenticating'; });
+     } on PlatformException catch (e) {
+       setState(() { _isAuthenticating = false; _authorized = 'Error - ${e.message}'; });
+       return;
+     }
+     if (!mounted) { return; }
+     if (authenticated) {
++      await StoreSecureConfig.storeValueIsUsingBioMetric("true");
+       await StoreGlobalConfig.setConfigToStore(SharePreferenceKey.isUsingBiometric, true);
+       // gọi eventSignin với _emailBio/_passBio
+     }
+   }
+```
+
+- Tóm tắt:
+  - Đọc/ghi email & password cho Face/Touch ID bằng `StoreSecureConfig.getEmailBio()/getPassBio()`.
+  - Sau khi đăng nhập bằng sinh trắc học thành công, cập nhật cờ sử dụng: `storeValueIsUsingBioMetric("true")` và `isUsingBiometric` trong `StoreGlobalConfig`.
+  - Điều kiện hiển thị/khả dụng của nút Face/Touch ID phụ thuộc `isAllowbiometric` và danh sách `getAvailableBiometrics()`.
 
